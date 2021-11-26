@@ -140,20 +140,21 @@ contract Weibo {
     }
 
     //根据id返回是否查询成功、昵称、账户、博文总数、like、dislike
-    function getUserInfo(address author) view public returns (bool isSuccess,string memory name,address userAddr,uint blogAmount,uint like,uint dislike){
-        if(!users[author].valid){
+    function getUserInfo(uint id) view public returns (bool isSuccess,string memory name,address useraddr,uint blogAmount,uint like,uint dislike){
+        if(id2address[id] == address(0)){
             return(false,"",address(0),0,0,0);
         }
-        uint like = 0;
-        uint dislike = 0;
-        string storage name = users[author].name;
-        address userAddr = users[author].addr;
+        address author = id2address[id];
+        uint all_like = 0;
+        uint all_dislike = 0;
+        string storage u_name = users[author].name;
+        address userAddress = users[author].addr;
         uint blogNumber = users[author].blogNumber;
         for(uint i = 0;i < blogNumber ; i++){
-            like += users[author].blogs[i].like;
-            dislike += users[author].blogs[i].dislike;
+            all_like += users[author].blogs[i].like;
+            all_dislike += users[author].blogs[i].dislike;
         }
-        return(true,name,userAddr,blogNumber,like,dislike);
+        return(true,u_name,userAddress,blogNumber,all_like,all_dislike);
         
     }
 
@@ -170,11 +171,11 @@ contract Weibo {
         if(id2address[user_id]==address(0) || users[id2address[user_id]].blogs[blog_id].valid==false){
             return(false,0,"",0,0);
         }
-        uint timestamp = users[id2address[user_id]].blogs[blog_id].timestamp;
-        string storage content = users[id2address[user_id]].blogs[blog_id].content;
-        uint like = users[id2address[user_id]].blogs[blog_id].like;
-        uint dislike = users[id2address[user_id]].blogs[blog_id].dislike;
-        return(true,timestamp,content,like,dislike);
+        uint blog_timestamp = users[id2address[user_id]].blogs[blog_id].timestamp;
+        string storage blog_content = users[id2address[user_id]].blogs[blog_id].content;
+        uint blog_like = users[id2address[user_id]].blogs[blog_id].like;
+        uint blog_dislike = users[id2address[user_id]].blogs[blog_id].dislike;
+        return(true,blog_timestamp,blog_content,blog_like,blog_dislike);
 
     }
 }
