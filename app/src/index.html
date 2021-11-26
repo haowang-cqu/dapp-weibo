@@ -6,17 +6,31 @@
   <title>去中心化微博-主页</title>
   <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
   <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css' rel='stylesheet' type='text/css'>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
-    integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" 
+  integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
   <style>
     .margin-top-1 {
       margin-top: 1em;
+    }
+
+    .blogTime {
+      color: #99a2aa;
+      margin-bottom: 10px;
+    }
+
+    span :hover {
+      cursor: pointer;
+      color: #1890ff;
+    }
+
+    .blog {
+      padding: 10px;
     }
   </style>
 </head>
 
 <body class="container">
-  <h2 style="text-align:center">欢迎来去中心化微博</h2>
+  <h2 style="text-align:center">欢迎来到去中心化微博</h2>
   <ul class="nav nav-tabs">
     <li class="active"><a data-toggle="tab" href="#sectionA" id="home_tab"><i class="fa fa-star"></i> 首页</a></li>
     <li><a data-toggle="tab" href="#sectionB" id="weibo_tab"><i class="fa fa-user"></i> 我的</a></li>
@@ -28,29 +42,7 @@
         <div class="panel-heading">
           <h3 class="panel-title">最新微博</h3>
         </div>
-        <div class="panel-body">
-          <div style="padding: 10px">
-            <h4>用户名</h4>
-            <p>
-              2021-12-01 9:30 &ensp;
-              <i class="fa fa-thumbs-up"></i> 10
-              <i class="fa fa-thumbs-down"></i> 1
-            </p>
-            <p>
-            唧唧复唧唧，木兰当户织。不闻机杼声，惟闻女叹息。问女何所思，问女何所忆。女亦无所思，女亦无所忆。昨夜见军帖，可汗大点兵。
-            </p>
-          </div>
-          <div style="padding: 10px">
-            <h4>用户名</h4>
-            <p>
-              2021-12-01 9:30 &ensp;
-              <i class="fa fa-thumbs-up"></i> 10
-              <i class="fa fa-thumbs-down"></i> 1
-            </p>
-            <p>
-            唧唧复唧唧，木兰当户织。不闻机杼声，惟闻女叹息。问女何所思，问女何所忆。女亦无所思，女亦无所忆。昨夜见军帖，可汗大点兵。
-            </p>
-          </div>
+        <div id="recentBlog" class="panel-body">
         </div>
       </div>
     </div>
@@ -64,24 +56,28 @@
           <table class="table table-striped">
             <tbody>
               <tr>
+                <td>ID</td>
+                <td id="myID"></td>
+              </tr>
+              <tr>
                 <td>昵称</td>
-                <td id="myName">Tom</td>
+                <td id="myName"></td>
               </tr>
               <tr>
                 <td>账户地址</td>
-                <td id="myAccount">0x2353CFBA70AD6deE720607f810Df29127DD92f07</td>
+                <td id="myAddr"></td>
               </tr>
               <tr>
                 <td>博文总数</td>
-                <td id="myBlogAccount">10</td>
+                <td id="myBlogNumber"></td>
               </tr>
               <tr>
                 <td>点赞总数</td>
-                <td id="myLikeAccount">99</td>
+                <td id="myLike"></td>
               </tr>
               <tr>
                 <td>点踩总数</td>
-                <td id="myDislikeAccount">3</td>
+                <td id="myDislike"></td>
               </tr>
             </tbody>
           </table>
@@ -92,13 +88,12 @@
           <h3 class="panel-title">发微博</h3>
         </div>
         <div class="panel-body">
-          <textarea id="weiboContent" style="width: 100%; height:100px"></textarea>
+          <textarea id="newBlogContent" placeholder="微博正文不超过160字节..." style="width: 100%; height:100px"></textarea>
           <div style="text-align:center">
-            <button id="sendweiboBtn" class="btn btn-primary">发送</button>
+            <button class="btn btn-primary" onclick="App.postBlog()">发送</button>
           </div>
         </div>
       </div>
-      <!---->
       <div class="panel panel-primary">
         <div class="panel-heading">
           <h3 class="panel-title">我的微博</h3>
@@ -109,13 +104,12 @@
               <table class="table table-striped">
                 <tr>
                   <td>ID</td>
-                  <td>博文</td>
                   <td>发布时间</td>
+                  <td>内容</td>
                   <td>点赞数</td>
                   <td>点踩数</td>
                 </tr>
-                <tbody id="weiboContentList">
-
+                <tbody id="myBlogTable">
                 </tbody>
               </table>
             </div>
@@ -133,11 +127,11 @@
             <tbody>
               <tr>
                 <td>用户总数</td>
-                <td id="userAmount"></td>
+                <td id="userAmount">0</td>
               </tr>
               <tr>
                 <td>博文总数</td>
-                <td id="blogAmount"></td>
+                <td id="blogAmount">0</td>
               </tr>
             </tbody>
           </table>
@@ -159,23 +153,7 @@
                 <th>点踩总数</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>1</td>
-                <td>Tom</td>
-                <td>0x2353CFBA70AD6deE720607f810Df29127DD92f07</td>
-                <td>10</td>
-                <td>100</td>
-                <td>8</td>
-              </tr>
-              <tr>
-                <td>2</td>
-                <td>Tom</td>
-                <td>0x2353CFBA70AD6deE720607f810Df29127DD92f07</td>
-                <td>10</td>
-                <td>100</td>
-                <td>8</td>
-              </tr>
+            <tbody id="userTable">
             </tbody>
           </table>
         </div>
