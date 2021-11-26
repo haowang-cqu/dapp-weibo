@@ -133,11 +133,11 @@
             <tbody>
               <tr>
                 <td>用户总数</td>
-                <td id="myName"></td>
+                <td id="userAmount"></td>
               </tr>
               <tr>
                 <td>博文总数</td>
-                <td id="myAccount"></td>
+                <td id="blogAmount"></td>
               </tr>
             </tbody>
           </table>
@@ -187,10 +187,10 @@
         <div class="panel-body">
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">@</span>
-            <input type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1">
+            <input id="inputUsername" type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1">
           </div>
           <div style="text-align:center; margin-top: 10px;">
-            <button id="registerBtn" class="btn btn-primary">立即注册</button>
+            <button id="registerBtn" class="btn btn-primary" onclick="App.createUser()">立即注册</button>
           </div>
         </div>
       </div>
@@ -200,6 +200,6 @@
 </body>
 <script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-<!-- <script src="index.js"></script> -->
+<script src="index.js"></script>
 
 </html>

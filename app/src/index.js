@@ -1,10 +1,10 @@
 import Web3 from "web3";
-import metaCoinArtifact from "../../build/contracts/MetaCoin.json";
+import weiboArtifact from "../../build/contracts/Weibo.json";
 
 const App = {
   web3: null,
   account: null,
-  meta: null,
+  weibo: null,
 
   start: async function() {
     const { web3 } = this;
@@ -12,9 +12,9 @@ const App = {
     try {
       // get contract instance
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = metaCoinArtifact.networks[networkId];
-      this.meta = new web3.eth.Contract(
-        metaCoinArtifact.abi,
+      const deployedNetwork = weiboArtifact.networks[networkId];
+      this.weibo = new web3.eth.Contract(
+        weiboArtifact.abi,
         deployedNetwork.address,
       );
 
@@ -36,23 +36,39 @@ const App = {
     balanceElement.innerHTML = balance;
   },
 
-  sendCoin: async function() {
-    const amount = parseInt(document.getElementById("amount").value);
-    const receiver = document.getElementById("receiver").value;
-
-    this.setStatus("Initiating transaction... (please wait)");
-
-    const { sendCoin } = this.meta.methods;
-    await sendCoin(receiver, amount).send({ from: this.account });
-
-    this.setStatus("Transaction complete!");
-    this.refreshBalance();
+  createUser: async function() {
+    const username = $("#inputUsername").val();
+    console.log(username);
+    if (username.length > 0 && username.length <= 64) {
+      await this.weibo.methods.createUser(username).send({from: this.account});
+      this.weibo.events.CreateUser(function (error, event) {
+        console.log(event);
+        if (!error && event.returnValues.isSuccess) {
+          alert("注册成功");
+          this.refreshMy();
+          this.refreshAdmin();
+        }
+        else if (!error && !event.returnValues.isSuccess) {
+          alert("注册失败: "+event.returnValues.message);
+        }
+      });
+    }
   },
 
-  setStatus: function(message) {
-    const status = document.getElementById("status");
-    status.innerHTML = message;
+  // 刷新主页
+  refreshHome: async function() {
   },
+
+  // 刷新个人页
+  refreshMy: async function() {
+  },
+
+  // 刷新管理页
+  refreshAdmin: async function() {
+    const result = await this.weibo.methods.getAllUserAndBlogs().call();
+    $("#userAmount").text(result.userAmount);
+    $("#blogAmount").text(result.blogAmount);
+  }
 };
 
 window.App = App;
