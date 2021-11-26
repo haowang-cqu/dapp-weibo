@@ -140,7 +140,7 @@ contract Weibo {
     }
 
     //根据id返回是否查询成功、昵称、账户、博文总数、like、dislike
-    function getUserInfo(address author) view public returns (bool,string memory,address,uint,uint,uint){
+    function getUserInfo(address author) view public returns (bool isSuccess,string memory name,address userAddr,uint blogAmount,uint like,uint dislike){
         if(!users[author].valid){
             return(false,"",address(0),0,0,0);
         }
@@ -158,7 +158,7 @@ contract Weibo {
     }
 
     //整个系统用户总数、博文总数
-    function getAllUserAndBlogs() view public returns(uint,uint){
+    function getUserAmountAndBlogAmount() view public returns(uint userAmount,uint blogAmount){
         uint Allblogs = 0;
         for(uint i = 0;i<_numberOfUser;i++){
             Allblogs += users[id2address[i]].blogNumber;
@@ -166,7 +166,7 @@ contract Weibo {
         return(_numberOfUser,Allblogs);
     }
 
-    function getBlogByID(uint user_id,uint blog_id) view public returns(bool,uint,string memory,uint,uint){
+    function getBlogByID(uint user_id,uint blog_id) view public returns(bool isSucess,uint timestamp,string memory content,uint like,uint dislike){
         if(id2address[user_id]==address(0) || users[id2address[user_id]].blogs[blog_id].valid==false){
             return(false,0,"",0,0);
         }
