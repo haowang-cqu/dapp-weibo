@@ -1,5 +1,4 @@
 pragma solidity >=0.4.21 <0.7.0;
-
 contract Weibo {
     // 管理员
     address admin;
@@ -165,5 +164,17 @@ contract Weibo {
             Allblogs += users[id2address[i]].blogNumber;
         }
         return(_numberOfUser,Allblogs);
+    }
+
+    function getBlogByID(uint user_id,uint blog_id) view public returns(bool,uint,string memory,uint,uint){
+        if(id2address[user_id]==address(0) || users[id2address[user_id]].blogs[blog_id].valid==false){
+            return(false,0,"",0,0);
+        }
+        uint timestamp = users[id2address[user_id]].blogs[blog_id].timestamp;
+        string storage content = users[id2address[user_id]].blogs[blog_id].content;
+        uint like = users[id2address[user_id]].blogs[blog_id].like;
+        uint dislike = users[id2address[user_id]].blogs[blog_id].dislike;
+        return(true,timestamp,content,like,dislike);
+
     }
 }

@@ -1,6 +1,6 @@
 import Web3 from "web3";
-import metaCoinArtifact from "../../build/contracts/MetaCoin.json";
-
+// import metaCoinArtifact from "../../build/contracts/MetaCoin.json";
+import WeiboArtifact from "../../build/contracts/WeiboArtifact.json";
 const App = {
   web3: null,
   account: null,
@@ -12,17 +12,16 @@ const App = {
     try {
       // get contract instance
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = metaCoinArtifact.networks[networkId];
+      const deployedNetwork = WeiboArtifact.networks[networkId];
       this.meta = new web3.eth.Contract(
-        metaCoinArtifact.abi,
+        WeiboArtifact.abi,
         deployedNetwork.address,
       );
 
       // get accounts
       const accounts = await web3.eth.getAccounts();
       this.account = accounts[0];
-
-      this.refreshBalance();
+      // this.refreshBalance();
     } catch (error) {
       console.error("Could not connect to contract or chain.");
     }
@@ -35,24 +34,8 @@ const App = {
     const balanceElement = document.getElementsByClassName("balance")[0];
     balanceElement.innerHTML = balance;
   },
-
-  sendCoin: async function() {
-    const amount = parseInt(document.getElementById("amount").value);
-    const receiver = document.getElementById("receiver").value;
-
-    this.setStatus("Initiating transaction... (please wait)");
-
-    const { sendCoin } = this.meta.methods;
-    await sendCoin(receiver, amount).send({ from: this.account });
-
-    this.setStatus("Transaction complete!");
-    this.refreshBalance();
-  },
-
-  setStatus: function(message) {
-    const status = document.getElementById("status");
-    status.innerHTML = message;
-  },
+  
+  
 };
 
 window.App = App;
