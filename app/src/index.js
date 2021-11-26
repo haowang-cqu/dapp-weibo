@@ -21,8 +21,7 @@ const App = {
       // get accounts
       const accounts = await web3.eth.getAccounts();
       this.account = accounts[0];
-
-      this.refreshBalance();
+      // this.refreshBalance();
     } catch (error) {
       console.error("Could not connect to contract or chain.");
     }
