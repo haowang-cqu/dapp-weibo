@@ -115,9 +115,236 @@
 \section{设计思路}
 
 \subsection{创建项目}
+前面我们已经介绍过本项目的方案选型，我们在开发环境中使用Ganache作为以太坊客户端进行智能合约的
+部署，同时使用Truffle作为开发框架构建我们的项目。简化起见，我们不使用React项目模板，而使用
+Webpack项目模板，这样我们使用传统的前端开发技术完成前端页面的编写。
+\begin{lstlisting}[language=bash]
+# 安装 Truffle
+npm install -g truffle
+# 创建项目目录
+mkdir dapp-weibo
+cd dapp-weibo
+# 拉取项目模板创建新项目
+truffle unbox webpack
+\end{lstlisting}
 
+项目创建好后目录结构如下：
+\begin{verbatim}
+    |--app --------------------前端项目
+    |--|--src -----------------网页源码html\css\javascript
+    |--contracts --------------智能合约
+    |--migrations -------------合约部署脚本
+    |--test -------------------合约测试脚本    
+\end{verbatim}
+
+\newpage
+之后我们使用下面这些命令完成项目的构建、部署、测试、启动等：
+\begin{lstlisting}[language=bash]
+# 编译智能合约
+truffle compile
+# 部署智能合约
+truffle migrate
+# 测试智能合约
+truffle test
+# 启动前端
+cd app && npm run dev
+# 构建前端
+cd app && npm run build
+\end{lstlisting}
 
 \subsection{合约}
+\subsubsection{数据结构}
+我们需要在合约中存储用户信息和微博信息，我们将其分别定义为一个结构体，其中微博结构体需要存储
+微博创建的时间戳、微博内容、点赞数量和点踩数量，微博用户结构体需要存储用户ID、用户账户地址、
+用户名、微博数量、所有微博。具体定义如下：
+
+\begin{lstlisting}[language=c]
+// 博文
+struct Blog {
+    uint256 timestamp;
+    string content;
+    bool isValid;
+    uint256 like;
+    uint256 dislike;
+}
+
+// 微博用户
+struct User {
+    uint256 id;
+    address addr;
+    string name;
+    bool isValid;
+    uint256 blogNumber;
+    mapping(uint256 => Blog) blogs;
+}
+\end{lstlisting}
+
+同时为了方便我们在合约方法中通过账户地址、用户ID、用户名等各种不同的方式查询用户，
+我们定义了下面几个映射表：
+
+\begin{lstlisting}[language=c]
+// 存储用户的hash表
+mapping(address => User) users;
+mapping(address => string) address2name;
+mapping(string => address) name2address;
+mapping(uint256 => address) id2address;
+\end{lstlisting}
+
+\subsubsection{合约方法}
+创建一个微博用户时需要检测该用户昵称是否被占用以及该账户地址是否以及注册，如果出现昵称占用或者
+账户以及被注册则提示注册失败，反之则在\verb|users|映射表中新建一个微博用户，同时维护好所有
+映射关系。具体实现如下：
+
+\begin{lstlisting}[language=c]
+// 创建用户
+event CreateUser(address sender, bool isSuccess, string message);
+
+function createUser(string memory name) public {
+    // name已经被占用
+    if (name2address[name] != address(0)) {
+        emit CreateUser(msg.sender, false, "昵称已被占用");
+        return;
+    }
+    // msg.sender 已经注册过
+    if (bytes(address2name[msg.sender]).length != 0) {
+        emit CreateUser(msg.sender, false, "您的账户已被注册");
+        return;
+    }
+    // 昵称长度超过64字节限制
+    if (bytes(name).length == 0 || bytes(name).length > 64) {
+        emit CreateUser(msg.sender, false, "昵称长度不合理");
+        return;
+    }
+    users[msg.sender].id = userNumber;
+    users[msg.sender].addr = msg.sender;
+    users[msg.sender].name = name;
+    users[msg.sender].blogNumber = 0;
+    users[msg.sender].isValid = true;
+    // 保存id到账户的映射关系
+    id2address[userNumber] = msg.sender;
+    // 保存账户到昵称的双向映射关系
+    address2name[msg.sender] = name;
+    name2address[name] = msg.sender;
+    userNumber++;
+    emit CreateUser(msg.sender, true, "新用户创建成功");
+}
+\end{lstlisting}
+
+发微博时需要检测博文长度是否超过限制，如果超过限制则提示发送失败，否则在对应用户的\verb|blogs|
+映射表中新建一条微博，同时需要将微博的点赞数和点踩数都置为0。具体实现如下：
+\begin{lstlisting}[language=c]
+// 发微博
+event PostBlog(address sender, bool isSuccess, string message);
+
+function postBlog(string memory content) public {
+    // 微博长度超过160字节
+    if (bytes(content).length == 0 || bytes(content).length > 160) {
+        emit PostBlog(msg.sender, false, "博文长度不合理");
+        return;
+    }
+    users[msg.sender].blogs[users[msg.sender].blogNumber].timestamp = now;
+    users[msg.sender].blogs[users[msg.sender].blogNumber].content = content;
+    users[msg.sender].blogs[users[msg.sender].blogNumber].like = 0;
+    users[msg.sender].blogs[users[msg.sender].blogNumber].dislike = 0;
+    users[msg.sender].blogs[users[msg.sender].blogNumber].isValid = true;
+    users[msg.sender].blogNumber++;
+    emit PostBlog(msg.sender, true, "微博发布成功");
+}
+\end{lstlisting}
+
+给指定用户的指定微博点赞/点踩时需要将用户ID和微博ID传给合约方法，方法中检测该用户的该微博
+是否存在如果不存在则提示失败，反之给该微博的点赞数/点踩数增加1。具体实现如下：
+\begin{lstlisting}[language=c]
+// 给博文点赞
+event LikeBlog(address sender, bool isSuccess, string message);
+
+function likeBlog(uint256 user_id, uint256 blog_id) public {
+    address addr = id2address[user_id];
+    if (!users[addr].isValid) {
+        emit LikeBlog(msg.sender, false, "用户不存在");
+        return;
+    }
+    if (!users[addr].blogs[blog_id].isValid) {
+        emit LikeBlog(msg.sender, false, "博文不存在");
+        return;
+    }
+    users[addr].blogs[blog_id].like += 1;
+    emit LikeBlog(msg.sender, true, "点赞成功");
+}
+
+// 给博文点踩
+event DislikeBlog(address sender, bool isSuccess, string message);
+function dislikeBlog(uint256 user_id, uint256 blog_id) public {
+    address addr = id2address[user_id];
+    if (!users[addr].isValid) {
+        emit LikeBlog(msg.sender, false, "用户不存在");
+        return;
+    }
+    if (!users[addr].blogs[blog_id].isValid) {
+        emit LikeBlog(msg.sender, false, "博文不存在");
+        return;
+    }
+    users[addr].blogs[blog_id].dislike += 1;
+    emit LikeBlog(msg.sender, true, "点踩成功");
+}
+\end{lstlisting}
+
+当然为了前端能够很好的给用户展示用户的个人信息，用户的微博列表，系统的用户列表等信息，我们
+还需要在合约中提供一系列的查询方法，例如查询用户总数、查询博文总数、根据用户ID查询用户信息、
+根据用户ID和微博ID查询微博等。由于大部分查询都是简单的将信息返回而已，所以下面不再一一列出。
+其中根据用户ID查询用户信息的方法如下：
+\begin{lstlisting}[language=c]
+// 根据id返回是否查询成功、昵称、账户、博文数、like、dislike
+function getUserInfo(uint256 id)
+    public
+    view
+    returns (
+        bool isSuccess,
+        string memory name,
+        address addr,
+        uint256 blogNumber,
+        uint256 like,
+        uint256 dislike
+    )
+{
+    if (id2address[id] == address(0)) {
+        return (false, "", address(0), 0, 0, 0);
+    }
+    address _addr = id2address[id];
+    uint256 _like = 0;
+    uint256 _dislike = 0;
+    for (uint256 i = 0; i < users[_addr].blogNumber; i++) {
+        _like += users[_addr].blogs[i].like;
+        _dislike += users[_addr].blogs[i].dislike;
+    }
+    return (true, users[_addr].name, users[_addr].addr, users[_addr].blogNumber, _like, _dislike);
+}
+\end{lstlisting}
+
+根据用户ID和微博ID查询微博信息的方法如下：
+\begin{lstlisting}[language=c]
+// 根据用户id和博文id返回博文信息
+function getBlog(uint256 user_id, uint256 blog_id)
+    public
+    view
+    returns (
+        bool isSuccess,
+        uint256 timestamp,
+        string memory content,
+        uint256 like,
+        uint256 dislike
+    )
+{
+    address addr = id2address[user_id];
+    if (!users[addr].isValid || !users[addr].blogs[blog_id].isValid) {
+        return (false, 0, "", 0, 0);
+    }
+    Blog memory blog = users[addr].blogs[blog_id];
+    return (true, blog.timestamp, blog.content, blog.like, blog.dislike);
+}
+\end{lstlisting}
+
+
 \subsection{前端应用}
 
 \section{结果展示}
