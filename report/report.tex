@@ -5,7 +5,7 @@
 \documentclass[bwprint]{hfutreport}
 
 \title{基于以太坊的微博系统设计与实现}
-\stunum{20184347, 2018xxxx}
+\stunum{20184347, 20181656}
 \stuname{王\quad 浩, 李涵威}
 \stuclass{信息安全2班, 信息安全1班}
 \supervisor{叶春晓}
@@ -296,17 +296,14 @@ function dislikeBlog(uint256 user_id, uint256 blog_id) public {
 \begin{lstlisting}[language=c]
 // 根据id返回是否查询成功、昵称、账户、博文数、like、dislike
 function getUserInfo(uint256 id)
-    public
-    view
-    returns (
+    public view returns (
         bool isSuccess,
         string memory name,
         address addr,
         uint256 blogNumber,
         uint256 like,
         uint256 dislike
-    )
-{
+    ){
     if (id2address[id] == address(0)) {
         return (false, "", address(0), 0, 0, 0);
     }
@@ -325,16 +322,13 @@ function getUserInfo(uint256 id)
 \begin{lstlisting}[language=c]
 // 根据用户id和博文id返回博文信息
 function getBlog(uint256 user_id, uint256 blog_id)
-    public
-    view
-    returns (
+    public view returns (
         bool isSuccess,
         uint256 timestamp,
         string memory content,
         uint256 like,
         uint256 dislike
-    )
-{
+    ){
     address addr = id2address[user_id];
     if (!users[addr].isValid || !users[addr].blogs[blog_id].isValid) {
         return (false, 0, "", 0, 0);
@@ -344,11 +338,130 @@ function getBlog(uint256 user_id, uint256 blog_id)
 }
 \end{lstlisting}
 
-
 \subsection{前端应用}
+前端页面的展示我们放在下一节进行，我们这里只对JavaScript脚本中关键的函数进行说明。首先是注册用户，
+注册用户需要用户在前端页面中指定一个昵称，我们需要获取用户输入的昵称并使用Web3.js提供的API调用合
+约中的\verb|createUser|方法进行用户注册，该方法的调用会主动唤起MetaMask发起一次转账，当然需要
+用户手动确认。具体实现如下：
+
+\begin{lstlisting}[language=c]
+// 创建用户
+createUser: async function () {
+    const username = $("#inputUsername").val();
+    if (username.length > 0 && username.length <= 64) {
+        await this.weibo.methods.createUser(username).send({ from: this.account });
+        this.weibo.events.CreateUser(function (error, event) {
+        if (!error && event.returnValues.isSuccess) {
+            console.log("注册账户成功");
+        }
+        else if (!error && !event.returnValues.isSuccess) {
+            alert("账户注册失败: " + event.returnValues.message);
+        }
+        });
+        // 清空输入框
+        $("#inputUsername").val("");
+        this.refreshHome();
+        this.refreshMy();
+        this.refreshAdmin();
+    }
+}
+\end{lstlisting}
+
+发微博时读取用户输入的微博内容，然后调用智能合约的\verb|postBlog|方法发送微博，具体实现如下：
+\begin{lstlisting}[language=c]
+// 发微博
+postBlog: async function () {
+    const content = $("#newBlogContent").val();
+    if (content.length > 0 && content.length <= 160) {
+    await this.weibo.methods.postBlog(content).send({ from: this.account });
+    this.weibo.events.PostBlog(function (error, event) {
+        if (!error && event.returnValues.isSuccess) {
+        console.log("微博发送成功");
+        }
+        else if (!error && !event.returnValues.isSuccess) {
+        alert("微博发送失败: " + event.returnValues.message);
+        }
+    });
+    // 清空输入框
+    $("#newBlogContent").val("");
+    this.refreshHome();
+    this.refreshMy();
+    this.refreshAdmin();
+    }
+}
+\end{lstlisting}
+
+点赞和点踩同理，直接调用合约中对应的方法即可，具体实现如下：
+\begin{lstlisting}[language=c]
+// 点赞
+like: async function (likeBtn) {
+    const user_id = parseInt($(likeBtn).attr("user_id"));
+    const blog_id = parseInt($(likeBtn).attr("blog_id"));
+    await this.weibo.methods.likeBlog(user_id, blog_id).send({from: this.account});
+    this.refreshHome();
+    this.refreshMy();
+    this.refreshAdmin();
+},
+
+// 点踩
+dislike: async function (dislikeBtn) {
+    const user_id = parseInt($(dislikeBtn).attr("user_id"));
+    const blog_id = parseInt($(dislikeBtn).attr("blog_id"));
+    await this.weibo.methods.dislikeBlog(user_id, blog_id).send({from: this.account});
+    this.refreshHome();
+    this.refreshMy();
+    this.refreshAdmin();
+},
+\end{lstlisting}
+
+限于篇幅，其余获取用户信息和系统信息的函数这里不再一一列举。
 
 \section{结果展示}
+首先我们启动Ganache，在终端执行\verb|ganache-cli|命令，如\cref{fig:ganache}~所示，可以看到
+Ganache在\verb|127.0.0.1:8545|上开启了HTTP RPC，并且默认创建了10个账户，每个账户都有100ETH的余额。
 
+\begin{figure}[!htbp]
+    \includegraphics[width=\linewidth]{ganache}
+    \caption{启动Ganache}
+    \label{fig:ganache}
+\end{figure}
+
+然后我们使用\verb|truffle migrate|部署智能合约，如\cref{fig:migrate}~所示，从控制台输出中
+可以得到部署完成后的合约地址为\verb|0xD1EC0F2e1E3916301068A638864990F9A2994e55|。
+
+\begin{figure}[!htbp]
+    \includegraphics[width=\linewidth]{migrate}
+    \caption{部署智能合约}
+    \label{fig:migrate}
+\end{figure}
+
+使用\verb|cd app && npm run dev|启动Web前端，可以看到总共有三个页面：首页、用户、后台。其中首页
+根据时间顺序展示了所有微博，用户可以对每一条微博点赞或者点踩，如\cref{fig:home}~所示。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=.8\linewidth]{home}
+    \caption{首页}
+    \label{fig:home}
+\end{figure}
+
+用户页展示了当前用户的信息，以及发过的所有微博，当然用户也可以在这里发微博，如\cref{fig:user}~所示。
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=.8\linewidth]{user}
+    \caption{用户页面}
+    \label{fig:user}
+\end{figure}
+
+\newpage
+管理员页展示了系统信息，以及所有注册用户信息，并且可以在这个页面注册新用户，如\cref{fig:admin}~所示。
+
+\begin{figure}[!htbp]
+    \includegraphics[width=\linewidth]{admin}
+    \caption{管理员页面}
+    \label{fig:admin}
+\end{figure}
 
 \section{小组分工}
 我们小组共两位成员，分工情况如\cref{tab:xzfg}~所示。另外我们在GitHub上进行项目合作，完整项目代码见
@@ -360,13 +473,25 @@ function getBlog(uint256 user_id, uint256 blog_id)
         \hline
         {\bf 姓名} & {\bf 学号} & {\bf 分工}         \\
         \hline
-        王\quad 浩 & 20184347   & 系统设计、报告编写 \\
+        王\quad 浩 & 20184347  & 系统设计、合约编写、前端应用编写、报告编写 \\
         \hline
-        李涵威     & 2018xxxx   & 系统设计、报告编写 \\
+        李涵威     & 20181656   & 系统设计、合约编写、前端应用编写、演示视频录制 \\
         \hline
     \end{tabular}
 \end{table}
 
+\newpage 
+\begin{thebibliography}{9}%宽度9
+    \bibitem[1]{qukuailiankaifashizhan}
+    吴寿鹤.
+    \newblock 区块链开发实战：以太坊关键技术与案例分析[M].
+    \newblock 机械工业出版社, 北京, 2018.
+
+    \bibitem[2]{qukuailianjinjiejishushizhan}
+    蔡亮.
+    \newblock 区块链技术进阶与实战[M].
+    \newblock 人民邮电出版社, 北京, 2018.
+\end{thebibliography}
 
 
 \end{document}

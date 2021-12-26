@@ -343,7 +343,7 @@
 	% COVER
 	\begin{center}
 		% Upper part of the page
-		\includegraphics[width=0.5\textwidth]{figures/CQU}\\[1cm]    
+		\includegraphics[width=0.6\textwidth]{figures/CQU}\\[1cm]    
 		
 		{\fontsize{70pt}\baselineskip 课\qquad\ 程\qquad\ 设\qquad\ 计}\\[7cm]
 		
